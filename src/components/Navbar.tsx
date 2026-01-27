@@ -1,11 +1,62 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Menu, X, MapPin, Calendar, Car, History, Utensils, Bed, User, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, X, MapPin, Calendar, Car, History, Utensils, Bed, User, Plus, LogOut, Settings } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        setUser(session.user);
+
+        // Check if user is admin
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .single();
+
+        setIsAdmin(profile?.is_admin || false);
+      }
+      setLoading(false);
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user || null);
+
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .single();
+        setIsAdmin(profile?.is_admin || false);
+      } else {
+        setIsAdmin(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsAdmin(false);
+    setIsOpen(false);
+  };
 
   const navLinks = [
     { href: '/events', label: 'Events', icon: Calendar },
@@ -45,13 +96,46 @@ export default function Navbar() {
               <Plus className="h-4 w-4" />
               <span>Submit Event</span>
             </Link>
-            <Link
-              href="/login"
-              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium border border-white/30 hover:bg-white/10 transition-colors"
-            >
-              <User className="h-4 w-4" />
-              <span>Login</span>
-            </Link>
+
+            {!loading && (
+              <>
+                {user ? (
+                  <div className="flex items-center space-x-2">
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium hover:bg-[#014a2d] transition-colors"
+                      >
+                        <Settings className="h-4 w-4" />
+                        <span>Admin</span>
+                      </Link>
+                    )}
+                    <Link
+                      href="/account"
+                      className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium border border-white/30 hover:bg-white/10 transition-colors"
+                    >
+                      <User className="h-4 w-4" />
+                      <span>Account</span>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium hover:bg-[#014a2d] transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium border border-white/30 hover:bg-white/10 transition-colors"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>Login</span>
+                  </Link>
+                )}
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -91,14 +175,49 @@ export default function Navbar() {
               <Plus className="h-5 w-5" />
               <span>Submit Event</span>
             </Link>
-            <Link
-              href="/login"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium border border-white/30 hover:bg-white/10 transition-colors"
-            >
-              <User className="h-5 w-5" />
-              <span>Login</span>
-            </Link>
+
+            {!loading && (
+              <>
+                {user ? (
+                  <>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium hover:bg-[#013220] transition-colors"
+                      >
+                        <Settings className="h-5 w-5" />
+                        <span>Admin</span>
+                      </Link>
+                    )}
+                    <Link
+                      href="/account"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium border border-white/30 hover:bg-white/10 transition-colors"
+                    >
+                      <User className="h-5 w-5" />
+                      <span>Account</span>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium hover:bg-[#013220] transition-colors w-full text-left"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      <span>Logout</span>
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium border border-white/30 hover:bg-white/10 transition-colors"
+                  >
+                    <User className="h-5 w-5" />
+                    <span>Login</span>
+                  </Link>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}

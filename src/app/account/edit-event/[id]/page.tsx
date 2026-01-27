@@ -1,15 +1,20 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, Clock, MapPin, FileText, Link as LinkIcon, ArrowLeft, CheckCircle, AlertCircle, Upload, X, LogIn } from 'lucide-react';
+import { Calendar, Clock, MapPin, FileText, Link as LinkIcon, ArrowLeft, CheckCircle, AlertCircle, Upload, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
+import { ShaftesburyEvent } from '@/types';
 
-export default function SubmitEventPage() {
+export default function EditEventPage() {
   const router = useRouter();
+  const params = useParams();
+  const eventId = params.id as string;
+
   const [user, setUser] = useState<User | null>(null);
+  const [event, setEvent] = useState<ShaftesburyEvent | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -30,20 +35,54 @@ export default function SubmitEventPage() {
   });
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndFetchEvent = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+
+      if (!session?.user) {
+        router.push('/login');
+        return;
+      }
+
+      setUser(session.user);
+
+      // Fetch the event
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single();
+
+      if (eventError || !eventData) {
+        setError('Event not found');
+        setAuthLoading(false);
+        return;
+      }
+
+      // Check ownership
+      if (eventData.user_id !== session.user.id) {
+        setError('You do not have permission to edit this event');
+        setAuthLoading(false);
+        return;
+      }
+
+      setEvent(eventData);
+      setFormData({
+        title: eventData.title,
+        date: eventData.date,
+        time: eventData.time,
+        location: eventData.location,
+        description: eventData.description,
+        image_url: eventData.image_url || '',
+        website_url: eventData.website_url || '',
+      });
+      if (eventData.image_url) {
+        setImagePreview(eventData.image_url);
+      }
       setAuthLoading(false);
     };
 
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    checkAuthAndFetchEvent();
+  }, [eventId, router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,6 +104,7 @@ export default function SubmitEventPage() {
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setFormData(prev => ({ ...prev, image_url: '' }));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -101,7 +141,7 @@ export default function SubmitEventPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !event) return;
 
     setError('');
     setLoading(true);
@@ -115,31 +155,28 @@ export default function SubmitEventPage() {
         setUploadProgress(100);
       }
 
-      const { error: submitError } = await supabase
+      const { error: updateError } = await supabase
         .from('events')
-        .insert([
-          {
-            ...formData,
-            image_url: imageUrl,
-            user_id: user.id,
-            status: 'pending',
-            created_at: new Date().toISOString(),
-          },
-        ]);
+        .update({
+          ...formData,
+          image_url: imageUrl,
+          // Reset to pending if published (requires re-approval)
+          status: event.status === 'published' ? 'pending' : event.status,
+        })
+        .eq('id', eventId);
 
-      if (submitError) throw submitError;
+      if (updateError) throw updateError;
 
       setSuccess(true);
     } catch (err) {
-      console.error('Submit error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to submit event. Please try again.');
+      console.error('Update error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update event. Please try again.');
     } finally {
       setLoading(false);
       setUploadProgress(0);
     }
   };
 
-  // Loading state
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center">
@@ -151,39 +188,21 @@ export default function SubmitEventPage() {
     );
   }
 
-  // Not logged in - show login prompt
-  if (!user) {
+  if (error && !event) {
     return (
       <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center py-12 px-4">
         <div className="max-w-md w-full">
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <div className="w-16 h-16 bg-[#013220] rounded-full flex items-center justify-center mx-auto mb-4">
-              <LogIn className="h-8 w-8 text-[#C5A059]" />
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
-            <h1 className="text-2xl font-bold text-[#013220] mb-2">Sign In Required</h1>
-            <p className="text-gray-600 mb-6">
-              Please sign in or create an account to submit an event to the Shaftesbury community.
-            </p>
-            <div className="space-y-3">
-              <Link
-                href="/login"
-                className="block w-full py-3 px-4 bg-[#013220] text-white font-semibold rounded-lg hover:bg-[#014a2d] transition-colors text-center"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="block w-full py-3 px-4 border-2 border-[#013220] text-[#013220] font-semibold rounded-lg hover:bg-[#013220] hover:text-white transition-colors text-center"
-              >
-                Create Account
-              </Link>
-            </div>
+            <h1 className="text-2xl font-bold text-[#013220] mb-2">Error</h1>
+            <p className="text-gray-600 mb-6">{error}</p>
             <Link
-              href="/events"
-              className="inline-flex items-center text-gray-500 hover:text-[#013220] mt-6 transition-colors"
+              href="/account"
+              className="block w-full py-3 px-4 bg-[#013220] text-white font-semibold rounded-lg hover:bg-[#014a2d] transition-colors text-center"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Events
+              Back to My Account
             </Link>
           </div>
         </div>
@@ -199,36 +218,22 @@ export default function SubmitEventPage() {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-[#013220] mb-2">Event Submitted!</h1>
+            <h1 className="text-2xl font-bold text-[#013220] mb-2">Event Updated!</h1>
             <p className="text-gray-600 mb-6">
-              Thank you for submitting your event. Our team will review it and publish it once approved.
+              Your event has been updated successfully.
+              {event?.status === 'published' && (
+                <span className="block mt-2 text-yellow-600">
+                  Note: Your event has been moved back to pending and will need to be re-approved.
+                </span>
+              )}
             </p>
             <div className="space-y-3">
               <Link
                 href="/account"
                 className="block w-full py-3 px-4 bg-[#013220] text-white font-semibold rounded-lg hover:bg-[#014a2d] transition-colors text-center"
               >
-                View My Events
+                Back to My Events
               </Link>
-              <button
-                onClick={() => {
-                  setSuccess(false);
-                  setImageFile(null);
-                  setImagePreview(null);
-                  setFormData({
-                    title: '',
-                    date: '',
-                    time: '',
-                    location: '',
-                    description: '',
-                    image_url: '',
-                    website_url: '',
-                  });
-                }}
-                className="block w-full py-3 px-4 border-2 border-[#013220] text-[#013220] font-semibold rounded-lg hover:bg-[#013220] hover:text-white transition-colors text-center"
-              >
-                Submit Another Event
-              </button>
             </div>
           </div>
         </div>
@@ -242,18 +247,18 @@ export default function SubmitEventPage() {
       <section className="bg-[#013220] text-white py-12">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link
-            href="/events"
+            href="/account"
             className="inline-flex items-center text-white/80 hover:text-white mb-4 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Events
+            Back to My Account
           </Link>
           <div className="flex items-center mb-2">
             <Calendar className="h-8 w-8 text-[#C5A059] mr-3" />
-            <h1 className="text-3xl font-bold">Submit an Event</h1>
+            <h1 className="text-3xl font-bold">Edit Event</h1>
           </div>
           <p className="text-gray-300">
-            Share your event with the Shaftesbury community. All submissions are reviewed before publishing.
+            Update your event details. Changes to published events will require re-approval.
           </p>
         </div>
       </section>
@@ -285,7 +290,6 @@ export default function SubmitEventPage() {
                     value={formData.title}
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C5A059] focus:border-transparent outline-none transition-all"
-                    placeholder="e.g., Summer Festival in the Park"
                   />
                 </div>
               </div>
@@ -343,7 +347,6 @@ export default function SubmitEventPage() {
                     value={formData.location}
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C5A059] focus:border-transparent outline-none transition-all"
-                    placeholder="e.g., Town Hall, High Street"
                   />
                 </div>
               </div>
@@ -361,7 +364,6 @@ export default function SubmitEventPage() {
                   value={formData.description}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C5A059] focus:border-transparent outline-none transition-all resize-none"
-                  placeholder="Tell us about your event..."
                 />
               </div>
 
@@ -416,10 +418,6 @@ export default function SubmitEventPage() {
                     <p className="text-xs text-gray-500 mt-1">Uploading image...</p>
                   </div>
                 )}
-
-                <p className="mt-2 text-sm text-gray-500">
-                  Upload an image for your event (recommended size: 1200x630px)
-                </p>
               </div>
 
               {/* Website URL */}
@@ -448,11 +446,8 @@ export default function SubmitEventPage() {
                   disabled={loading}
                   className="w-full py-4 px-6 bg-[#C5A059] text-[#013220] font-semibold rounded-lg hover:bg-[#d4af6a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                 >
-                  {loading ? 'Submitting...' : 'Submit Event for Review'}
+                  {loading ? 'Saving...' : 'Save Changes'}
                 </button>
-                <p className="mt-3 text-center text-sm text-gray-500">
-                  By submitting, you agree that your event information may be published on our website.
-                </p>
               </div>
             </form>
           </div>

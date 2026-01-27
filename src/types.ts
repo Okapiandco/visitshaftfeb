@@ -34,13 +34,16 @@ export interface UserProfile {
 export interface Landmark {
   id: string;
   name: string;
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
   description: string;
   type?: string;
   distance?: string;
   image_url?: string;
-  keyInfo?: string;
+  key_info?: string;
+  website_url?: string;
+  status?: 'pending' | 'published';
+  created_at?: string;
 }
 
 export interface DiningPlace extends Place {

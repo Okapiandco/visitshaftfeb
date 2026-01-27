@@ -1,16 +1,32 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Calendar, MapPin, Clock, Plus } from 'lucide-react';
-import { MOCK_EVENTS } from '@/constants';
-
-export const metadata: Metadata = {
-  title: 'Events',
-  description: 'Discover upcoming events in Shaftesbury, Dorset. From farmers markets to live music, find out what\'s happening in our historic town.',
-};
+import { supabase } from '@/lib/supabase';
+import { ShaftesburyEvent } from '@/types';
 
 export default function EventsPage() {
-  const publishedEvents = MOCK_EVENTS.filter((event) => event.status === 'published');
+  const [events, setEvents] = useState<ShaftesburyEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('status', 'published')
+        .order('date', { ascending: true });
+
+      if (!error && data) {
+        setEvents(data);
+      }
+      setLoading(false);
+    };
+
+    fetchEvents();
+  }, []);
 
   return (
     <div className="bg-[#F9F7F2] min-h-screen">
@@ -44,7 +60,12 @@ export default function EventsPage() {
       {/* Events List */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {publishedEvents.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 border-4 border-[#013220] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-gray-500">Loading events...</p>
+            </div>
+          ) : events.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h2 className="text-2xl font-semibold text-gray-600">No upcoming events</h2>
@@ -58,20 +79,25 @@ export default function EventsPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {publishedEvents.map((event) => (
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
+              {events.map((event) => (
                 <Link
                   key={event.id}
                   href={`/events/${event.id}`}
-                  className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow"
+                  className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow block break-inside-avoid mb-8"
                 >
-                  <div className="relative h-48">
-                    <Image
-                      src={event.image_url}
-                      alt={event.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                  <div className="relative bg-gray-200">
+                    {event.image_url ? (
+                      <img
+                        src={event.image_url}
+                        alt={event.title}
+                        className="w-full h-auto object-contain group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-48 flex items-center justify-center bg-[#013220]">
+                        <Calendar className="h-16 w-16 text-[#C5A059]" />
+                      </div>
+                    )}
                     <div className="absolute top-4 left-4 bg-[#013220] text-white px-4 py-2 rounded-lg">
                       <div className="text-2xl font-bold">
                         {new Date(event.date).getDate()}
