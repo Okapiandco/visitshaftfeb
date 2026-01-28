@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Settings, Calendar, MapPin, Users, Plus, ArrowLeft, Clock, Check, X, Eye, LogOut, Shield } from 'lucide-react';
+import { Settings, Calendar, MapPin, Users, Plus, ArrowLeft, Clock, Check, X, Eye, LogOut, Shield, Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { UserProfile, ShaftesburyEvent, Landmark } from '@/types';
 
@@ -148,34 +148,6 @@ export default function AdminPage() {
     }
   };
 
-  const publishLandmark = async (landmarkId: string) => {
-    try {
-      const { error } = await supabase
-        .from('landmarks')
-        .update({ status: 'published' })
-        .eq('id', landmarkId);
-
-      if (error) throw error;
-      fetchAllLandmarks();
-    } catch (error) {
-      console.error('Error publishing landmark:', error);
-    }
-  };
-
-  const unpublishLandmark = async (landmarkId: string) => {
-    try {
-      const { error } = await supabase
-        .from('landmarks')
-        .update({ status: 'pending' })
-        .eq('id', landmarkId);
-
-      if (error) throw error;
-      fetchAllLandmarks();
-    } catch (error) {
-      console.error('Error unpublishing landmark:', error);
-    }
-  };
-
   const deleteLandmark = async (landmarkId: string) => {
     if (!confirm('Are you sure you want to delete this landmark? This action cannot be undone.')) {
       return;
@@ -245,7 +217,7 @@ export default function AdminPage() {
     { label: 'Pending Events', value: pendingEvents.length.toString(), icon: Clock },
     { label: 'Published Events', value: allEvents.filter(e => e.status === 'published').length.toString(), icon: Check },
     { label: 'Total Events', value: allEvents.length.toString(), icon: Calendar },
-    { label: 'Published Landmarks', value: allLandmarks.filter(l => l.status === 'published').length.toString(), icon: MapPin },
+    { label: 'Total Landmarks', value: allLandmarks.length.toString(), icon: MapPin },
   ];
 
   return (
@@ -458,8 +430,6 @@ export default function AdminPage() {
                       <LandmarkCard
                         key={landmark.id}
                         landmark={landmark}
-                        onPublish={() => publishLandmark(landmark.id)}
-                        onUnpublish={() => unpublishLandmark(landmark.id)}
                         onDelete={() => deleteLandmark(landmark.id)}
                       />
                     ))}
@@ -561,6 +531,14 @@ function EventCard({
           <p className="text-gray-600 mt-2 line-clamp-2">{event.description}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/admin/edit-event/${event.id}`}
+            className="flex items-center px-4 py-2 bg-[#013220] text-white rounded-lg hover:bg-[#014a2d] transition-colors"
+            title="Edit"
+          >
+            <Pencil className="h-4 w-4 mr-1" />
+            Edit
+          </Link>
           {showApprove && (
             <button
               onClick={onApprove}
@@ -597,13 +575,9 @@ function EventCard({
 
 function LandmarkCard({
   landmark,
-  onPublish,
-  onUnpublish,
   onDelete,
 }: {
   landmark: Landmark;
-  onPublish: () => void;
-  onUnpublish: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -612,15 +586,6 @@ function LandmarkCard({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-[#013220] text-lg">{landmark.name}</h3>
-            <span
-              className={`px-2 py-0.5 text-xs rounded-full ${
-                landmark.status === 'published'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-yellow-100 text-yellow-700'
-              }`}
-            >
-              {landmark.status}
-            </span>
             {landmark.type && (
               <span className="px-2 py-0.5 text-xs rounded-full bg-[#F9F7F2] text-[#013220]">
                 {landmark.type}
@@ -643,26 +608,14 @@ function LandmarkCard({
           <p className="text-gray-600 mt-2 line-clamp-2">{landmark.description}</p>
         </div>
         <div className="flex items-center gap-2">
-          {landmark.status === 'pending' && (
-            <button
-              onClick={onPublish}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              title="Publish"
-            >
-              <Check className="h-4 w-4 mr-1" />
-              Publish
-            </button>
-          )}
-          {landmark.status === 'published' && (
-            <button
-              onClick={onUnpublish}
-              className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-              title="Unpublish"
-            >
-              <Clock className="h-4 w-4 mr-1" />
-              Unpublish
-            </button>
-          )}
+          <Link
+            href={`/admin/edit-landmark/${landmark.id}`}
+            className="flex items-center px-4 py-2 bg-[#013220] text-white rounded-lg hover:bg-[#014a2d] transition-colors"
+            title="Edit"
+          >
+            <Pencil className="h-4 w-4 mr-1" />
+            Edit
+          </Link>
           <button
             onClick={onDelete}
             className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"

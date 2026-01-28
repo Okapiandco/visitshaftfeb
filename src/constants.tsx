@@ -16,7 +16,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Historic Site',
     distance: 'In Town',
     image_url: 'https://i.postimg.cc/SKvjQ0th/gold_hill_shaftesbury_2.jpg',
-    keyInfo: 'Free access, Best views at sunrise/sunset',
+    key_info: 'Free access, Best views at sunrise/sunset',
   },
   {
     id: 'abbey',
@@ -27,7 +27,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Museum & Gardens',
     distance: 'In Town',
     image_url: 'https://i.postimg.cc/76r8nm5D/PXL_20230928_120620015.jpg',
-    keyInfo: 'Open Apr-Oct, Entry fee applies',
+    key_info: 'Open Apr-Oct, Entry fee applies',
   },
   {
     id: 'gold-hill-museum',
@@ -38,7 +38,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Local Museum',
     distance: 'In Town',
     image_url: 'https://i.postimg.cc/SKvjQ0th/gold_hill_shaftesbury_2.jpg',
-    keyInfo: 'Open Apr-Oct, Free entry',
+    key_info: 'Open Apr-Oct, Free entry',
   },
   {
     id: 'park-walk',
@@ -49,7 +49,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Viewpoint',
     distance: 'In Town',
     image_url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80',
-    keyInfo: 'Free access, 0.5 mile walk',
+    key_info: 'Free access, 0.5 mile walk',
   },
   {
     id: 'arts-centre',
@@ -60,7 +60,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Arts & Culture',
     distance: 'In Town',
     image_url: 'https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&w=800&q=80',
-    keyInfo: 'Check website for events',
+    key_info: 'Check website for events',
   },
   {
     id: 'castle-hill',
@@ -71,7 +71,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Viewpoint',
     distance: 'In Town',
     image_url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-    keyInfo: 'Free access, Benches available',
+    key_info: 'Free access, Benches available',
   },
   {
     id: 'fontmell-downs',
@@ -82,7 +82,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Nature Reserve',
     distance: '4-5 Miles',
     image_url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=800&q=80',
-    keyInfo: 'Free access, Dogs on leads',
+    key_info: 'Free access, Dogs on leads',
   },
   {
     id: 'duncliffe-wood',
@@ -93,7 +93,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Woodland',
     distance: '2 Miles',
     image_url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80',
-    keyInfo: 'Free access, Muddy in winter',
+    key_info: 'Free access, Muddy in winter',
   },
   {
     id: 'win-green',
@@ -104,7 +104,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'High Point',
     distance: '5 Miles',
     image_url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-    keyInfo: 'Free parking, NT owned',
+    key_info: 'Free parking, NT owned',
   },
   {
     id: 'zig-zag-hill',
@@ -115,7 +115,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Viewpoint',
     distance: '4 Miles',
     image_url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80',
-    keyInfo: 'Parking at viewing point',
+    key_info: 'Parking at viewing point',
   },
   {
     id: 'kingsettle-wood',
@@ -126,7 +126,7 @@ export const LANDMARKS: Landmark[] = [
     type: 'Woodland',
     distance: '< 1 Mile',
     image_url: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
-    keyInfo: 'Free access',
+    key_info: 'Free access',
   },
 ];
 

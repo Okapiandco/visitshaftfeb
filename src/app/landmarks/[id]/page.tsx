@@ -17,25 +17,40 @@ export default function LandmarkDetailPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const fetchLandmark = async () => {
-      const { data, error } = await supabase
-        .from('landmarks')
-        .select('*')
-        .eq('id', params.id)
-        .eq('status', 'published')
-        .single();
+    let isMounted = true;
 
-      if (error || !data) {
+    const fetchLandmark = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('landmarks')
+          .select('*')
+          .eq('id', params.id)
+          .single();
+
+        if (!isMounted) return;
+
+        if (error || !data) {
+          setError(true);
+        } else {
+          setLandmark(data);
+        }
+      } catch (err) {
+        if (!isMounted) return;
         setError(true);
-      } else {
-        setLandmark(data);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     if (params.id) {
       fetchLandmark();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [params.id]);
 
   if (loading) {

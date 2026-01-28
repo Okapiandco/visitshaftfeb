@@ -1,14 +1,19 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { MapPin, FileText, Link as LinkIcon, ArrowLeft, CheckCircle, AlertCircle, Upload, X, Navigation } from 'lucide-react';
+import { MapPin, FileText, Link as LinkIcon, ArrowLeft, CheckCircle, AlertCircle, Upload, X, Navigation, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { Landmark } from '@/types';
 
-export default function AddLandmarkPage() {
+export default function EditLandmarkPage() {
   const router = useRouter();
+  const params = useParams();
+  const landmarkId = params.id as string;
+
   const [isAdmin, setIsAdmin] = useState(false);
+  const [landmark, setLandmark] = useState<Landmark | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -26,26 +31,65 @@ export default function AddLandmarkPage() {
     website_url: '',
     lat: '',
     lng: '',
+    image_url: '',
   });
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    const checkAdminAndFetchLandmark = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', session.user.id)
-          .single();
+      if (!session?.user) {
+        setAuthLoading(false);
+        return;
+      }
 
-        setIsAdmin(profile?.is_admin || false);
+      // Check admin status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile?.is_admin) {
+        setAuthLoading(false);
+        return;
+      }
+
+      setIsAdmin(true);
+
+      // Fetch the landmark
+      const { data: landmarkData, error: landmarkError } = await supabase
+        .from('landmarks')
+        .select('*')
+        .eq('id', landmarkId)
+        .single();
+
+      if (landmarkError || !landmarkData) {
+        setError('Landmark not found');
+        setAuthLoading(false);
+        return;
+      }
+
+      setLandmark(landmarkData);
+      setFormData({
+        name: landmarkData.name || '',
+        description: landmarkData.description || '',
+        type: landmarkData.type || '',
+        distance: landmarkData.distance || '',
+        key_info: landmarkData.key_info || '',
+        website_url: landmarkData.website_url || '',
+        lat: landmarkData.lat?.toString() || '',
+        lng: landmarkData.lng?.toString() || '',
+        image_url: landmarkData.image_url || '',
+      });
+      if (landmarkData.image_url) {
+        setImagePreview(landmarkData.image_url);
       }
       setAuthLoading(false);
     };
 
-    checkAdmin();
-  }, []);
+    checkAdminAndFetchLandmark();
+  }, [landmarkId]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -67,6 +111,7 @@ export default function AddLandmarkPage() {
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setFormData(prev => ({ ...prev, image_url: '' }));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -102,38 +147,39 @@ export default function AddLandmarkPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!landmark) return;
+
     setError('');
     setLoading(true);
 
     try {
-      let imageUrl = '';
+      let imageUrl = formData.image_url;
 
       if (imageFile) {
         imageUrl = await uploadImage(imageFile) || '';
       }
 
-      const { error: submitError } = await supabase
+      const { error: updateError } = await supabase
         .from('landmarks')
-        .insert([
-          {
-            name: formData.name,
-            description: formData.description,
-            type: formData.type || null,
-            distance: formData.distance || null,
-            key_info: formData.key_info || null,
-            website_url: formData.website_url || null,
-            lat: formData.lat ? parseFloat(formData.lat) : null,
-            lng: formData.lng ? parseFloat(formData.lng) : null,
-            image_url: imageUrl || null,
-          },
-        ]);
+        .update({
+          name: formData.name,
+          description: formData.description,
+          type: formData.type || null,
+          distance: formData.distance || null,
+          key_info: formData.key_info || null,
+          website_url: formData.website_url || null,
+          lat: formData.lat ? parseFloat(formData.lat) : null,
+          lng: formData.lng ? parseFloat(formData.lng) : null,
+          image_url: imageUrl || null,
+        })
+        .eq('id', landmarkId);
 
-      if (submitError) throw submitError;
+      if (updateError) throw updateError;
 
       setSuccess(true);
     } catch (err) {
-      console.error('Submit error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to add landmark.');
+      console.error('Update error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update landmark.');
     } finally {
       setLoading(false);
     }
@@ -152,12 +198,36 @@ export default function AddLandmarkPage() {
       <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center py-12 px-4">
         <div className="max-w-md w-full text-center">
           <div className="bg-white rounded-xl shadow-lg p-8">
-            <MapPin className="h-16 w-16 text-red-400 mx-auto mb-4" />
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="h-8 w-8 text-red-600" />
+            </div>
             <h1 className="text-2xl font-bold text-[#013220] mb-2">Access Denied</h1>
-            <p className="text-gray-600 mb-6">Only administrators can add landmarks.</p>
+            <p className="text-gray-600 mb-6">Only administrators can edit landmarks.</p>
+            <Link
+              href="/login"
+              className="block w-full py-3 px-4 bg-[#013220] text-white font-semibold rounded-lg hover:bg-[#014a2d] transition-colors"
+            >
+              Sign In as Admin
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !landmark) {
+    return (
+      <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center py-12 px-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-[#013220] mb-2">Error</h1>
+            <p className="text-gray-600 mb-6">{error}</p>
             <Link
               href="/admin"
-              className="block w-full py-3 px-4 bg-[#013220] text-white font-semibold rounded-lg hover:bg-[#014a2d] transition-colors"
+              className="block w-full py-3 px-4 bg-[#013220] text-white font-semibold rounded-lg hover:bg-[#014a2d] transition-colors text-center"
             >
               Back to Admin
             </Link>
@@ -175,35 +245,21 @@ export default function AddLandmarkPage() {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-[#013220] mb-2">Landmark Added!</h1>
-            <p className="text-gray-600 mb-6">The landmark has been added successfully.</p>
+            <h1 className="text-2xl font-bold text-[#013220] mb-2">Landmark Updated!</h1>
+            <p className="text-gray-600 mb-6">The landmark has been updated successfully.</p>
             <div className="space-y-3">
               <Link
-                href="/landmarks"
+                href="/admin"
                 className="block w-full py-3 px-4 bg-[#013220] text-white font-semibold rounded-lg hover:bg-[#014a2d] transition-colors text-center"
+              >
+                Back to Admin Dashboard
+              </Link>
+              <Link
+                href="/landmarks"
+                className="block w-full py-3 px-4 border-2 border-[#013220] text-[#013220] font-semibold rounded-lg hover:bg-[#013220] hover:text-white transition-colors text-center"
               >
                 View Landmarks
               </Link>
-              <button
-                onClick={() => {
-                  setSuccess(false);
-                  setImageFile(null);
-                  setImagePreview(null);
-                  setFormData({
-                    name: '',
-                    description: '',
-                    type: '',
-                    distance: '',
-                    key_info: '',
-                    website_url: '',
-                    lat: '',
-                    lng: '',
-                  });
-                }}
-                className="block w-full py-3 px-4 border-2 border-[#013220] text-[#013220] font-semibold rounded-lg hover:bg-[#013220] hover:text-white transition-colors text-center"
-              >
-                Add Another Landmark
-              </button>
             </div>
           </div>
         </div>
@@ -224,9 +280,9 @@ export default function AddLandmarkPage() {
           </Link>
           <div className="flex items-center mb-2">
             <MapPin className="h-8 w-8 text-[#C5A059] mr-3" />
-            <h1 className="text-3xl font-bold">Add Landmark</h1>
+            <h1 className="text-3xl font-bold">Edit Landmark</h1>
           </div>
-          <p className="text-gray-300">Add a new landmark or attraction to the website.</p>
+          <p className="text-gray-300">Update landmark details and information.</p>
         </div>
       </section>
 
@@ -423,7 +479,7 @@ export default function AddLandmarkPage() {
                   disabled={loading}
                   className="w-full py-4 px-6 bg-[#C5A059] text-[#013220] font-semibold rounded-lg hover:bg-[#d4af6a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                 >
-                  {loading ? 'Adding...' : 'Add Landmark'}
+                  {loading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

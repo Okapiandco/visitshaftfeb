@@ -11,20 +11,35 @@ export default function LandmarksPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLandmarks = async () => {
-      const { data, error } = await supabase
-        .from('landmarks')
-        .select('*')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false });
+    let isMounted = true;
 
-      if (!error && data) {
-        setLandmarks(data);
+    const fetchLandmarks = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('landmarks')
+          .select('*')
+          .order('sort_order', { ascending: true });
+
+        if (!isMounted) return;
+
+        if (!error && data) {
+          setLandmarks(data);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error('Fetch error:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     fetchLandmarks();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading) {

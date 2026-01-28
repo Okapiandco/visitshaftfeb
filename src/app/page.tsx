@@ -1,7 +1,23 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Calendar, Utensils, Bed, ArrowRight } from 'lucide-react';
 import { LANDMARKS, MOCK_EVENTS } from '@/constants';
+
+export const metadata: Metadata = {
+  title: 'Visit Shaftesbury - Discover Historic Dorset | Gold Hill & More',
+  description:
+    'Plan your visit to Shaftesbury, Dorset. Explore the iconic Gold Hill, historic abbey ruins, local events, dining, and accommodation in this beautiful hilltop town.',
+  openGraph: {
+    title: 'Visit Shaftesbury - Discover Historic Dorset',
+    description:
+      'Plan your visit to Shaftesbury, Dorset. Explore the iconic Gold Hill, historic abbey ruins, local events, and more.',
+    url: 'https://visitshaftesbury.co.uk',
+  },
+  alternates: {
+    canonical: 'https://visitshaftesbury.co.uk',
+  },
+};
 
 export default function HomePage() {
   const featuredLandmarks = LANDMARKS.slice(0, 4);

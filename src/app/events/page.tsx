@@ -7,25 +7,48 @@ import { Calendar, MapPin, Clock, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ShaftesburyEvent } from '@/types';
 
+// Note: Metadata must be in a separate file for client components
+// See events/layout.tsx for metadata
+
 export default function EventsPage() {
   const [events, setEvents] = useState<ShaftesburyEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('status', 'published')
-        .order('date', { ascending: true });
+    let isMounted = true;
 
-      if (!error && data) {
-        setEvents(data);
+    const fetchEvents = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('status', 'published')
+          .order('date', { ascending: true });
+
+        if (!isMounted) return;
+
+        if (error) {
+          console.error('Events fetch error:', error);
+        }
+
+        if (!error && data) {
+          setEvents(data);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error('Fetch exception:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     fetchEvents();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (

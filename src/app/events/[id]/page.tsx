@@ -17,25 +17,41 @@ export default function EventDetailPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const fetchEvent = async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('id', params.id)
-        .eq('status', 'published')
-        .single();
+    let isMounted = true;
 
-      if (error || !data) {
+    const fetchEvent = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', params.id)
+          .eq('status', 'published')
+          .single();
+
+        if (!isMounted) return;
+
+        if (error || !data) {
+          setError(true);
+        } else {
+          setEvent(data);
+        }
+      } catch (err) {
+        if (!isMounted) return;
         setError(true);
-      } else {
-        setEvent(data);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     if (params.id) {
       fetchEvent();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [params.id]);
 
   if (loading) {
