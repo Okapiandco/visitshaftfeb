@@ -117,7 +117,6 @@ export default function SubmitEventPage() {
         setUploadProgress(100);
       }
 
-      // Build the event data - excluding recurring field until column is added to database
       const eventData = {
         title: formData.title,
         date: formData.date,
@@ -126,6 +125,7 @@ export default function SubmitEventPage() {
         description: formData.description,
         image_url: imageUrl,
         website_url: formData.website_url,
+        recurring: formData.recurring,
         user_id: user.id,
         status: 'pending',
         created_at: new Date().toISOString(),
