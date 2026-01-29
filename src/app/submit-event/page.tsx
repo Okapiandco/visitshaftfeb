@@ -117,17 +117,23 @@ export default function SubmitEventPage() {
         setUploadProgress(100);
       }
 
+      // Build the event data - excluding recurring field until column is added to database
+      const eventData = {
+        title: formData.title,
+        date: formData.date,
+        time: formData.time,
+        location: formData.location,
+        description: formData.description,
+        image_url: imageUrl,
+        website_url: formData.website_url,
+        user_id: user.id,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      };
+
       const { error: submitError } = await supabase
         .from('events')
-        .insert([
-          {
-            ...formData,
-            image_url: imageUrl,
-            user_id: user.id,
-            status: 'pending',
-            created_at: new Date().toISOString(),
-          },
-        ]);
+        .insert([eventData]);
 
       if (submitError) throw submitError;
 

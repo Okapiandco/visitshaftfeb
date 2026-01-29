@@ -162,11 +162,17 @@ export default function AdminEditEventPage() {
       }
 
       // Admin edits keep the current status (no re-approval needed)
+      // Excluding recurring field until column is added to database
       const { error: updateError } = await supabase
         .from('events')
         .update({
-          ...formData,
+          title: formData.title,
+          date: formData.date,
+          time: formData.time,
+          location: formData.location,
+          description: formData.description,
           image_url: imageUrl,
+          website_url: formData.website_url,
         })
         .eq('id', eventId);
 
