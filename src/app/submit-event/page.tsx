@@ -109,12 +109,26 @@ export default function SubmitEventPage() {
     setLoading(true);
 
     try {
+      console.log('Starting event submission...');
+
+      // Verify session is still valid
+      console.log('Checking session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session check result:', { session: !!session, error: sessionError });
+
+      if (sessionError || !session) {
+        throw new Error('Your session has expired. Please log in again.');
+      }
+      console.log('Session verified, user:', session.user.email);
+
       let imageUrl = formData.image_url;
 
       if (imageFile) {
+        console.log('Uploading image...');
         setUploadProgress(50);
         imageUrl = await uploadImage(imageFile) || '';
         setUploadProgress(100);
+        console.log('Image uploaded:', imageUrl);
       }
 
       const eventData = {
@@ -131,16 +145,32 @@ export default function SubmitEventPage() {
         created_at: new Date().toISOString(),
       };
 
+      console.log('Submitting event data:', eventData);
+      console.log('User ID:', user.id);
+      console.log('User email:', user.email);
+
+      console.log('Making insert request...');
       const { error: submitError } = await supabase
         .from('events')
         .insert([eventData]);
 
+      console.log('Insert completed, error:', submitError);
+
       if (submitError) throw submitError;
 
       setSuccess(true);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Submit error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to submit event. Please try again.');
+      // Get more detailed error info from Supabase errors
+      const errorObj = err as { message?: string; code?: string; details?: string; hint?: string };
+      let errorMessage = 'Failed to submit event. Please try again.';
+      if (errorObj.message) {
+        errorMessage = errorObj.message;
+        if (errorObj.code) errorMessage += ` (Code: ${errorObj.code})`;
+        if (errorObj.details) errorMessage += ` - ${errorObj.details}`;
+        if (errorObj.hint) errorMessage += ` Hint: ${errorObj.hint}`;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setUploadProgress(0);
