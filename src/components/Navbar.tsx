@@ -14,21 +14,32 @@ export default function Navbar() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        setUser(session.user);
+        if (error) {
+          console.error('Auth session error:', error);
+          setLoading(false);
+          return;
+        }
 
-        // Check if user is admin
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', session.user.id)
-          .single();
+        if (session?.user) {
+          setUser(session.user);
 
-        setIsAdmin(profile?.is_admin || false);
+          // Check if user is admin
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single();
+
+          setIsAdmin(profile?.is_admin || false);
+        }
+      } catch (err) {
+        console.error('Auth check error:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();
