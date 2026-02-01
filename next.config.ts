@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Minimize router cache to ensure fresh data on navigation
+  experimental: {
+    staleTimes: {
+      dynamic: 0,
+      static: 30, // minimum allowed value
+    },
+  },
   images: {
     remotePatterns: [
       {

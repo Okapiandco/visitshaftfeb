@@ -1,55 +1,36 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Calendar, MapPin, Clock, Plus, Repeat } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { ShaftesburyEvent } from '@/types';
 
-// Note: Metadata must be in a separate file for client components
-// See events/layout.tsx for metadata
+// Force dynamic rendering and disable all caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
-export default function EventsPage() {
-  const [events, setEvents] = useState<ShaftesburyEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+// Server-side Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-  useEffect(() => {
-    let isMounted = true;
+async function getEvents(): Promise<ShaftesburyEvent[]> {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('status', 'published')
+    .order('date', { ascending: true });
 
-    const fetchEvents = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .eq('status', 'published')
-          .order('date', { ascending: true });
+  if (error) {
+    console.error('Events fetch error:', error);
+    return [];
+  }
 
-        if (!isMounted) return;
+  return data || [];
+}
 
-        if (error) {
-          console.error('Events fetch error:', error);
-        }
-
-        if (!error && data) {
-          setEvents(data);
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        console.error('Fetch exception:', err);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchEvents();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+export default async function EventsPage() {
+  const events = await getEvents();
 
   return (
     <div className="bg-[#F9F7F2] min-h-screen">
@@ -83,12 +64,7 @@ export default function EventsPage() {
       {/* Events List */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="w-12 h-12 border-4 border-[#013220] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-500">Loading events...</p>
-            </div>
-          ) : events.length === 0 ? (
+          {events.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h2 className="text-2xl font-semibold text-gray-600">No upcoming events</h2>
