@@ -36,49 +36,62 @@ export default function EditEventPage() {
 
   useEffect(() => {
     const checkAuthAndFetchEvent = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (!session?.user) {
-        router.push('/login');
-        return;
-      }
+        if (sessionError) {
+          console.error('Auth session error:', sessionError);
+          setError('Failed to verify authentication');
+          setAuthLoading(false);
+          return;
+        }
 
-      setUser(session.user);
+        if (!session?.user) {
+          router.push('/login');
+          return;
+        }
 
-      // Fetch the event
-      const { data: eventData, error: eventError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('id', eventId)
-        .single();
+        setUser(session.user);
 
-      if (eventError || !eventData) {
-        setError('Event not found');
+        // Fetch the event
+        const { data: eventData, error: eventError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .single();
+
+        if (eventError || !eventData) {
+          setError('Event not found');
+          setAuthLoading(false);
+          return;
+        }
+
+        // Check ownership
+        if (eventData.user_id !== session.user.id) {
+          setError('You do not have permission to edit this event');
+          setAuthLoading(false);
+          return;
+        }
+
+        setEvent(eventData);
+        setFormData({
+          title: eventData.title,
+          date: eventData.date,
+          time: eventData.time,
+          location: eventData.location,
+          description: eventData.description,
+          image_url: eventData.image_url || '',
+          website_url: eventData.website_url || '',
+        });
+        if (eventData.image_url) {
+          setImagePreview(eventData.image_url);
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        setError('An error occurred while loading');
+      } finally {
         setAuthLoading(false);
-        return;
       }
-
-      // Check ownership
-      if (eventData.user_id !== session.user.id) {
-        setError('You do not have permission to edit this event');
-        setAuthLoading(false);
-        return;
-      }
-
-      setEvent(eventData);
-      setFormData({
-        title: eventData.title,
-        date: eventData.date,
-        time: eventData.time,
-        location: eventData.location,
-        description: eventData.description,
-        image_url: eventData.image_url || '',
-        website_url: eventData.website_url || '',
-      });
-      if (eventData.image_url) {
-        setImagePreview(eventData.image_url);
-      }
-      setAuthLoading(false);
     };
 
     checkAuthAndFetchEvent();

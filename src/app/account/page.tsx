@@ -16,25 +16,36 @@ export default function AccountPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        // Fetch the user's profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+        if (error) {
+          console.error('Auth check error:', error);
+          setLoading(false);
+          return;
+        }
 
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          is_admin: profile?.is_admin || false,
-          full_name: profile?.full_name || session.user.user_metadata?.full_name,
-        });
-        fetchMyEvents(session.user.id);
+        if (session?.user) {
+          // Fetch the user's profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            is_admin: profile?.is_admin || false,
+            full_name: profile?.full_name || session.user.user_metadata?.full_name,
+          });
+          fetchMyEvents(session.user.id);
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();

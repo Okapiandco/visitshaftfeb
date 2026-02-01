@@ -33,9 +33,18 @@ export default function SubmitEventPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-      setAuthLoading(false);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Auth check error:', error);
+        }
+        setUser(session?.user || null);
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
     };
 
     checkAuth();

@@ -20,32 +20,42 @@ export default function AdminPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        // Fetch the user's profile to check admin status
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile && profile.is_admin) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            is_admin: profile.is_admin,
-            full_name: profile.full_name || session.user.user_metadata?.full_name,
-          });
-          fetchPendingEvents();
-          fetchAllEvents();
-          fetchAllLandmarks();
-        } else {
-          // Not an admin, redirect
-          setUser(null);
+        if (sessionError) {
+          console.error('Auth session error:', sessionError);
+          return;
         }
+
+        if (session?.user) {
+          // Fetch the user's profile to check admin status
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile && profile.is_admin) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              is_admin: profile.is_admin,
+              full_name: profile.full_name || session.user.user_metadata?.full_name,
+            });
+            fetchPendingEvents();
+            fetchAllEvents();
+            fetchAllLandmarks();
+          } else {
+            // Not an admin, redirect
+            setUser(null);
+          }
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();
