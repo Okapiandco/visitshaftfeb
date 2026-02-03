@@ -30,18 +30,29 @@ export default function AddLandmarkPage() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', session.user.id)
-          .single();
+        if (sessionError) {
+          console.error('Auth session error:', sessionError);
+          setAuthLoading(false);
+          return;
+        }
 
-        setIsAdmin(profile?.is_admin || false);
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single();
+
+          setIsAdmin(profile?.is_admin || false);
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      } finally {
+        setAuthLoading(false);
       }
-      setAuthLoading(false);
     };
 
     checkAdmin();

@@ -36,56 +36,68 @@ export default function EditLandmarkPage() {
 
   useEffect(() => {
     const checkAdminAndFetchLandmark = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (!session?.user) {
+        if (sessionError) {
+          console.error('Auth session error:', sessionError);
+          setAuthLoading(false);
+          return;
+        }
+
+        if (!session?.user) {
+          setAuthLoading(false);
+          return;
+        }
+
+        // Check admin status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!profile?.is_admin) {
+          setAuthLoading(false);
+          return;
+        }
+
+        setIsAdmin(true);
+
+        // Fetch the landmark
+        const { data: landmarkData, error: landmarkError } = await supabase
+          .from('landmarks')
+          .select('*')
+          .eq('id', landmarkId)
+          .single();
+
+        if (landmarkError || !landmarkData) {
+          setError('Landmark not found');
+          setAuthLoading(false);
+          return;
+        }
+
+        setLandmark(landmarkData);
+        setFormData({
+          name: landmarkData.name || '',
+          description: landmarkData.description || '',
+          type: landmarkData.type || '',
+          distance: landmarkData.distance || '',
+          key_info: landmarkData.key_info || '',
+          website_url: landmarkData.website_url || '',
+          lat: landmarkData.lat?.toString() || '',
+          lng: landmarkData.lng?.toString() || '',
+          image_url: landmarkData.image_url || '',
+        });
+        if (landmarkData.image_url) {
+          setImagePreview(landmarkData.image_url);
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        setError('An error occurred while loading');
+      } finally {
         setAuthLoading(false);
-        return;
       }
-
-      // Check admin status
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', session.user.id)
-        .single();
-
-      if (!profile?.is_admin) {
-        setAuthLoading(false);
-        return;
-      }
-
-      setIsAdmin(true);
-
-      // Fetch the landmark
-      const { data: landmarkData, error: landmarkError } = await supabase
-        .from('landmarks')
-        .select('*')
-        .eq('id', landmarkId)
-        .single();
-
-      if (landmarkError || !landmarkData) {
-        setError('Landmark not found');
-        setAuthLoading(false);
-        return;
-      }
-
-      setLandmark(landmarkData);
-      setFormData({
-        name: landmarkData.name || '',
-        description: landmarkData.description || '',
-        type: landmarkData.type || '',
-        distance: landmarkData.distance || '',
-        key_info: landmarkData.key_info || '',
-        website_url: landmarkData.website_url || '',
-        lat: landmarkData.lat?.toString() || '',
-        lng: landmarkData.lng?.toString() || '',
-        image_url: landmarkData.image_url || '',
-      });
-      if (landmarkData.image_url) {
-        setImagePreview(landmarkData.image_url);
-      }
-      setAuthLoading(false);
     };
 
     checkAdminAndFetchLandmark();

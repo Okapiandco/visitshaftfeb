@@ -36,55 +36,67 @@ export default function AdminEditEventPage() {
 
   useEffect(() => {
     const checkAdminAndFetchEvent = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (!session?.user) {
+        if (sessionError) {
+          console.error('Auth session error:', sessionError);
+          setAuthLoading(false);
+          return;
+        }
+
+        if (!session?.user) {
+          setAuthLoading(false);
+          return;
+        }
+
+        // Check admin status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!profile?.is_admin) {
+          setAuthLoading(false);
+          return;
+        }
+
+        setIsAdmin(true);
+
+        // Fetch the event
+        const { data: eventData, error: eventError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .single();
+
+        if (eventError || !eventData) {
+          setError('Event not found');
+          setAuthLoading(false);
+          return;
+        }
+
+        setEvent(eventData);
+        setFormData({
+          title: eventData.title,
+          date: eventData.date,
+          time: eventData.time,
+          location: eventData.location,
+          description: eventData.description,
+          image_url: eventData.image_url || '',
+          website_url: eventData.website_url || '',
+          recurring: eventData.recurring || 'none',
+        });
+        if (eventData.image_url) {
+          setImagePreview(eventData.image_url);
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        setError('An error occurred while loading');
+      } finally {
         setAuthLoading(false);
-        return;
       }
-
-      // Check admin status
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', session.user.id)
-        .single();
-
-      if (!profile?.is_admin) {
-        setAuthLoading(false);
-        return;
-      }
-
-      setIsAdmin(true);
-
-      // Fetch the event
-      const { data: eventData, error: eventError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('id', eventId)
-        .single();
-
-      if (eventError || !eventData) {
-        setError('Event not found');
-        setAuthLoading(false);
-        return;
-      }
-
-      setEvent(eventData);
-      setFormData({
-        title: eventData.title,
-        date: eventData.date,
-        time: eventData.time,
-        location: eventData.location,
-        description: eventData.description,
-        image_url: eventData.image_url || '',
-        website_url: eventData.website_url || '',
-        recurring: eventData.recurring || 'none',
-      });
-      if (eventData.image_url) {
-        setImagePreview(eventData.image_url);
-      }
-      setAuthLoading(false);
     };
 
     checkAdminAndFetchEvent();
