@@ -1,57 +1,38 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { Landmark } from '@/types';
 
-export default function LandmarksPage() {
-  const [landmarks, setLandmarks] = useState<Landmark[]>([]);
-  const [loading, setLoading] = useState(true);
+// Force dynamic rendering and disable all caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
-  useEffect(() => {
-    let isMounted = true;
+// Create Supabase client at runtime (not module load time)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
-    const fetchLandmarks = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('landmarks')
-          .select('*')
-          .order('sort_order', { ascending: true });
+async function getLandmarks(): Promise<Landmark[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('landmarks')
+    .select('*')
+    .order('sort_order', { ascending: true });
 
-        if (!isMounted) return;
-
-        if (!error && data) {
-          setLandmarks(data);
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        console.error('Fetch error:', err);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchLandmarks();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#013220] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading landmarks...</p>
-        </div>
-      </div>
-    );
+  if (error) {
+    console.error('Landmarks fetch error:', error);
+    return [];
   }
+
+  return data || [];
+}
+
+export default async function LandmarksPage() {
+  const landmarks = await getLandmarks();
 
   return (
     <div className="bg-[#F9F7F2] min-h-screen">
