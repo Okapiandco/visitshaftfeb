@@ -1,100 +1,24 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { MapPin, ArrowLeft, Info, ExternalLink, Share2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { Landmark } from '@/types';
+import { MapPin, ArrowLeft, Info, ExternalLink } from 'lucide-react';
+import { getLandmarkById } from '@/lib/notion';
+import { notFound } from 'next/navigation';
+import LandmarkClient from './LandmarkClient';
 
-const Map = dynamic(() => import('@/components/Map'), { ssr: false });
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export default function LandmarkDetailPage() {
-  const params = useParams();
-  const [landmark, setLandmark] = useState<Landmark | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
-  useEffect(() => {
-    let isMounted = true;
+export default async function LandmarkDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const landmark = await getLandmarkById(id);
 
-    const fetchLandmark = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('landmarks')
-          .select('*')
-          .eq('id', params.id)
-          .single();
-
-        if (!isMounted) return;
-
-        if (error || !data) {
-          setError(true);
-        } else {
-          setLandmark(data);
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        setError(true);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    if (params.id) {
-      fetchLandmark();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [params.id]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#013220] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading landmark...</p>
-        </div>
-      </div>
-    );
+  if (!landmark) {
+    notFound();
   }
-
-  if (error || !landmark) {
-    return (
-      <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center">
-        <div className="text-center">
-          <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-[#013220] mb-4">Landmark Not Found</h1>
-          <p className="text-gray-600 mb-6">This landmark may have been removed or is no longer available.</p>
-          <Link
-            href="/landmarks"
-            className="inline-flex items-center px-6 py-3 bg-[#013220] text-white font-semibold rounded-lg hover:bg-[#014a2d] transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Landmarks
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const shareLandmark = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: landmark.name,
-        text: `Check out ${landmark.name} in Shaftesbury!`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
-    }
-  };
 
   return (
     <div className="bg-[#F9F7F2] min-h-screen">
@@ -148,24 +72,9 @@ export default function LandmarkDetailPage() {
                 </p>
               </div>
 
-              {/* Map */}
+              {/* Map - Client Component */}
               {landmark.lat && landmark.lng && (
-                <div className="bg-white rounded-xl p-8 shadow-md mt-8">
-                  <h2 className="text-2xl font-bold text-[#013220] mb-4">Location</h2>
-                  <Map
-                    center={[landmark.lat, landmark.lng]}
-                    zoom={15}
-                    markers={[
-                      {
-                        lat: landmark.lat,
-                        lng: landmark.lng,
-                        title: landmark.name,
-                        description: landmark.description,
-                      },
-                    ]}
-                    className="h-[400px] rounded-lg"
-                  />
-                </div>
+                <LandmarkClient landmark={landmark} />
               )}
             </div>
 
@@ -208,17 +117,6 @@ export default function LandmarkDetailPage() {
                 </div>
 
                 <div className="mt-6 space-y-3">
-                  {landmark.website_url && (
-                    <a
-                      href={landmark.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full inline-flex items-center justify-center px-6 py-3 bg-[#C5A059] text-[#013220] font-semibold rounded-lg hover:bg-[#d4af6a] transition-colors"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Visit Website
-                    </a>
-                  )}
                   {landmark.lat && landmark.lng && (
                     <a
                       href={`https://www.google.com/maps/dir/?api=1&destination=${landmark.lat},${landmark.lng}`}
@@ -230,13 +128,6 @@ export default function LandmarkDetailPage() {
                       Get Directions
                     </a>
                   )}
-                  <button
-                    onClick={shareLandmark}
-                    className="w-full inline-flex items-center justify-center px-6 py-3 border-2 border-[#013220] text-[#013220] font-semibold rounded-lg hover:bg-[#013220] hover:text-white transition-colors"
-                  >
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </button>
                 </div>
               </div>
             </div>

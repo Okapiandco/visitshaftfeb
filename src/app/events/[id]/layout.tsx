@@ -1,8 +1,5 @@
 import type { Metadata } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+import { getEventById } from '@/lib/notion';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -11,21 +8,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
 
-  if (!supabaseUrl || !supabaseKey) {
-    return {
-      title: 'Event Details',
-      description: 'View event details in Shaftesbury, Dorset.',
-    };
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  const { data: event } = await supabase
-    .from('events')
-    .select('title, description, date, location, image_url')
-    .eq('id', id)
-    .eq('status', 'published')
-    .single();
+  const event = await getEventById(id);
 
   if (!event) {
     return {

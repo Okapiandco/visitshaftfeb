@@ -1,8 +1,5 @@
 import type { Metadata } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+import { getLandmarkById } from '@/lib/notion';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -11,20 +8,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
 
-  if (!supabaseUrl || !supabaseKey) {
-    return {
-      title: 'Landmark Details',
-      description: 'Explore landmarks and attractions in Shaftesbury, Dorset.',
-    };
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  const { data: landmark } = await supabase
-    .from('landmarks')
-    .select('name, description, type, image_url, key_info')
-    .eq('id', id)
-    .single();
+  const landmark = await getLandmarkById(id);
 
   if (!landmark) {
     return {
@@ -37,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${landmark.name}${typeText}`,
-    description: `${landmark.description.slice(0, 150)}... ${landmark.key_info ? landmark.key_info.slice(0, 50) : ''}`,
+    description: `${landmark.description.slice(0, 150)}...`,
     openGraph: {
       title: `${landmark.name} - Shaftesbury Landmark`,
       description: landmark.description.slice(0, 200),

@@ -1,35 +1,11 @@
 import Link from 'next/link';
 import { MapPin } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-import { Landmark } from '@/types';
+import { getLandmarks } from '@/lib/notion';
 
 // Force dynamic rendering and disable all caching
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
-
-// Create Supabase client at runtime (not module load time)
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
-async function getLandmarks(): Promise<Landmark[]> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('landmarks')
-    .select('*')
-    .order('sort_order', { ascending: true });
-
-  if (error) {
-    console.error('Landmarks fetch error:', error);
-    return [];
-  }
-
-  return data || [];
-}
 
 export default async function LandmarksPage() {
   const landmarks = await getLandmarks();

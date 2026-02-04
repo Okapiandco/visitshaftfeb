@@ -1,36 +1,11 @@
 import Link from 'next/link';
-import { Calendar, MapPin, Clock, Plus, Repeat } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-import { ShaftesburyEvent } from '@/types';
+import { Calendar, MapPin, Clock, Plus } from 'lucide-react';
+import { getEvents } from '@/lib/notion';
 
 // Force dynamic rendering and disable all caching
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
-
-// Create Supabase client at runtime (not module load time)
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
-async function getEvents(): Promise<ShaftesburyEvent[]> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .eq('status', 'published')
-    .order('date', { ascending: true });
-
-  if (error) {
-    console.error('Events fetch error:', error);
-    return [];
-  }
-
-  return data || [];
-}
 
 export default async function EventsPage() {
   const events = await getEvents();
@@ -108,12 +83,6 @@ export default async function EventsPage() {
                         {new Date(event.date).toLocaleDateString('en-GB', { month: 'short' })}
                       </div>
                     </div>
-                    {event.recurring && event.recurring !== 'none' && (
-                      <div className="absolute top-4 right-4 bg-[#C5A059] text-[#013220] px-3 py-1 rounded-full text-xs font-semibold flex items-center">
-                        <Repeat className="h-3 w-3 mr-1" />
-                        {event.recurring === 'weekly' ? 'Weekly' : 'Monthly'}
-                      </div>
-                    )}
                   </div>
                   <div className="p-6">
                     <h2 className="text-xl font-semibold text-[#013220] group-hover:text-[#C5A059] transition-colors mb-3">

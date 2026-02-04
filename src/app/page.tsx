@@ -3,20 +3,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Calendar, Utensils, Bed, ArrowRight } from 'lucide-react';
 import { LANDMARKS } from '@/constants';
-import { createClient } from '@supabase/supabase-js';
+import { getEvents } from '@/lib/notion';
 
 // Force dynamic rendering and disable all caching
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
-
-// Create Supabase client at runtime (not module load time)
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
 
 export const metadata: Metadata = {
   title: 'Visit Shaftesbury - Discover Historic Dorset | Gold Hill & More',
@@ -36,16 +28,9 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const featuredLandmarks = LANDMARKS.slice(0, 4);
 
-  // Fetch real events from Supabase
-  const supabase = getSupabase();
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .eq('status', 'published')
-    .order('date', { ascending: true })
-    .limit(3);
-
-  const upcomingEvents = events || [];
+  // Fetch events from Notion
+  const allEvents = await getEvents();
+  const upcomingEvents = allEvents.slice(0, 3);
 
   return (
     <div>

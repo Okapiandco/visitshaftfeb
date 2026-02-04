@@ -1,8 +1,5 @@
 import { MetadataRoute } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+import { getLandmarks, getEvents } from '@/lib/notion';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://visitshaftesbury.co.uk';
@@ -59,44 +56,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Dynamic pages from database
+  // Dynamic pages from Notion
   let dynamicPages: MetadataRoute.Sitemap = [];
 
-  if (supabaseUrl && supabaseKey) {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+  try {
+    // Fetch landmarks from Notion
+    const landmarks = await getLandmarks();
+    const landmarkPages = landmarks.map((landmark) => ({
+      url: `${baseUrl}/landmarks/${landmark.id}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }));
+    dynamicPages = [...dynamicPages, ...landmarkPages];
 
-    // Fetch landmarks
-    const { data: landmarks } = await supabase
-      .from('landmarks')
-      .select('id, updated_at')
-      .order('sort_order', { ascending: true });
-
-    if (landmarks) {
-      const landmarkPages = landmarks.map((landmark) => ({
-        url: `${baseUrl}/landmarks/${landmark.id}`,
-        lastModified: landmark.updated_at ? new Date(landmark.updated_at) : new Date(),
-        changeFrequency: 'monthly' as const,
-        priority: 0.7,
-      }));
-      dynamicPages = [...dynamicPages, ...landmarkPages];
-    }
-
-    // Fetch published events
-    const { data: events } = await supabase
-      .from('events')
-      .select('id, created_at')
-      .eq('status', 'published')
-      .order('date', { ascending: true });
-
-    if (events) {
-      const eventPages = events.map((event) => ({
-        url: `${baseUrl}/events/${event.id}`,
-        lastModified: event.created_at ? new Date(event.created_at) : new Date(),
-        changeFrequency: 'weekly' as const,
-        priority: 0.6,
-      }));
-      dynamicPages = [...dynamicPages, ...eventPages];
-    }
+    // Fetch events from Notion
+    const events = await getEvents();
+    const eventPages = events.map((event) => ({
+      url: `${baseUrl}/events/${event.id}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    }));
+    dynamicPages = [...dynamicPages, ...eventPages];
+  } catch (error) {
+    console.error('Error fetching data for sitemap:', error);
   }
 
   return [...staticPages, ...dynamicPages];
