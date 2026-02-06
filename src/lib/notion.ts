@@ -80,6 +80,7 @@ export interface NotionEvent {
   location: string;
   description: string;
   status: string;
+  category: string;
   image_url: string;
   submitter_name: string;
   submitter_email: string;
@@ -163,8 +164,8 @@ export async function getLandmarkById(id: string): Promise<NotionLandmark | null
   }
 }
 
-// Fetch all published events
-export async function getEvents(): Promise<NotionEvent[]> {
+// Fetch all published events (filters out past events by default)
+export async function getEvents(includePast: boolean = false): Promise<NotionEvent[]> {
   try {
     const response = await notion.search({
       filter: {
@@ -180,6 +181,10 @@ export async function getEvents(): Promise<NotionEvent[]> {
       return parentId === dbId;
     });
 
+    // Get today's date at midnight for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     return pages
       .map((page: any) => ({
         id: page.id,
@@ -189,11 +194,18 @@ export async function getEvents(): Promise<NotionEvent[]> {
         location: getRichText(page.properties.Location),
         description: getRichText(page.properties.Description),
         status: getSelect(page.properties.Status),
+        category: getSelect(page.properties.Category) || 'General',
         image_url: getFiles(page.properties.Image),
         submitter_name: getRichText(page.properties['Submitter Name']),
         submitter_email: getRichText(page.properties['Submitter Email']),
       }))
       .filter(event => event.status === 'Approved')
+      .filter(event => {
+        if (includePast) return true;
+        const eventDate = new Date(event.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today;
+      })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -214,6 +226,7 @@ export async function getEventById(id: string): Promise<NotionEvent | null> {
       location: getRichText(page.properties.Location),
       description: getRichText(page.properties.Description),
       status: getSelect(page.properties.Status),
+      category: getSelect(page.properties.Category) || 'General',
       image_url: getFiles(page.properties.Image),
       submitter_name: getRichText(page.properties['Submitter Name']),
       submitter_email: getRichText(page.properties['Submitter Email']),

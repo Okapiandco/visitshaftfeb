@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { Calendar, MapPin, Clock, Plus } from 'lucide-react';
+import { Calendar, Plus } from 'lucide-react';
 import { getEvents } from '@/lib/notion';
+import EventsClient from './EventsClient';
 
 // Force dynamic rendering and disable all caching
 export const dynamic = 'force-dynamic';
@@ -8,6 +9,7 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 export default async function EventsPage() {
+  // Fetch only upcoming events (past events are filtered out)
   const events = await getEvents();
 
   return (
@@ -56,55 +58,7 @@ export default async function EventsPage() {
               </Link>
             </div>
           ) : (
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
-              {events.map((event) => (
-                <Link
-                  key={event.id}
-                  href={`/events/${event.id}`}
-                  className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow block break-inside-avoid mb-8"
-                >
-                  <div className="relative bg-gray-200">
-                    {event.image_url ? (
-                      <img
-                        src={event.image_url}
-                        alt={event.title}
-                        className="w-full h-auto object-contain group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-48 flex items-center justify-center bg-[#013220]">
-                        <Calendar className="h-16 w-16 text-[#C5A059]" />
-                      </div>
-                    )}
-                    <div className="absolute top-4 left-4 bg-[#013220] text-white px-4 py-2 rounded-lg">
-                      <div className="text-2xl font-bold">
-                        {new Date(event.date).getDate()}
-                      </div>
-                      <div className="text-sm uppercase">
-                        {new Date(event.date).toLocaleDateString('en-GB', { month: 'short' })}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <h2 className="text-xl font-semibold text-[#013220] group-hover:text-[#C5A059] transition-colors mb-3">
-                      {event.title}
-                    </h2>
-                    <p className="text-gray-600 line-clamp-2 mb-4">
-                      {event.description}
-                    </p>
-                    <div className="space-y-2 text-sm text-gray-500">
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-[#C5A059]" />
-                        {event.time}
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-2 text-[#C5A059]" />
-                        {event.location}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <EventsClient events={events} />
           )}
         </div>
       </section>
