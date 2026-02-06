@@ -50,12 +50,16 @@ function getSelect(prop: any): string {
 }
 
 // Helper to extract files (for images)
+// Prefers external URLs (permanent) over Notion-hosted files (expire after 1 hour)
 function getFiles(prop: any): string {
   if (!prop || prop.type !== 'files') return '';
-  const file = prop.files?.[0];
-  if (!file) return '';
-  // Handle both external and Notion-hosted files
-  return file.external?.url || file.file?.url || '';
+  const files = prop.files || [];
+  if (files.length === 0) return '';
+  // Prefer external URLs as they don't expire
+  const external = files.find((f: any) => f.type === 'external');
+  if (external) return external.external?.url || '';
+  // Fall back to Notion-hosted file
+  return files[0]?.file?.url || '';
 }
 
 // Types matching existing app structure

@@ -16,7 +16,7 @@ export default async function EventDetailPage({ params }: PageProps) {
   const { id } = await params;
   const event = await getEventById(id);
 
-  if (!event || event.status !== 'Published') {
+  if (!event || event.status !== 'Approved') {
     notFound();
   }
 
