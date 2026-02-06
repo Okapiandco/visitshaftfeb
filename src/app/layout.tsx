@@ -4,6 +4,7 @@ import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { LocalBusinessJsonLd, WebsiteJsonLd } from '@/components/JsonLd';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -123,6 +124,7 @@ export default function RootLayout({
           </main>
           <Footer />
         </div>
+        <SpeedInsights />
       </body>
     </html>
   );
