@@ -16,7 +16,13 @@ export default async function EventDetailPage({ params }: PageProps) {
   const { id } = await params;
   const event = await getEventById(id);
 
-  if (!event || event.status !== 'Approved') {
+  // Hide unapproved or past events
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const eventDate = new Date(event?.date || '');
+  eventDate.setHours(0, 0, 0, 0);
+
+  if (!event || event.status !== 'Approved' || eventDate < today) {
     notFound();
   }
 
